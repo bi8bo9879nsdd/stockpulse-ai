@@ -101,7 +101,11 @@ def load_portfolio() -> list[dict[str, Any]]:
         return []
 
     try:
-        portfolio = json.loads(PORTFOLIO_FILE.read_text(encoding="utf-8"))
+        raw_json = PORTFOLIO_FILE.read_text(encoding="utf-8").strip()
+        if not raw_json:
+            save_portfolio([])
+            return []
+        portfolio = json.loads(raw_json)
         if not isinstance(portfolio, list):
             raise ValueError("持仓配置必须是列表")
         return [validate_position(position) for position in portfolio]
@@ -125,7 +129,11 @@ def load_alerts() -> list[dict[str, Any]]:
         return []
 
     try:
-        alerts = json.loads(ALERTS_FILE.read_text(encoding="utf-8"))
+        raw_json = ALERTS_FILE.read_text(encoding="utf-8").strip()
+        if not raw_json:
+            save_alerts([])
+            return []
+        alerts = json.loads(raw_json)
         if not isinstance(alerts, list):
             raise ValueError("提醒配置必须是列表")
         return [validate_alert(alert) for alert in alerts]
@@ -148,9 +156,16 @@ def load_json_file(path: Path, default: Any) -> Any:
         save_json_file(path, default)
         return default
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        st.warning(f"本地文件读取失败：{path.name}。已使用默认值。")
+        raw_json = path.read_text(encoding="utf-8").strip()
+        if not raw_json:
+            save_json_file(path, default)
+            return default
+        return json.loads(raw_json)
+    except json.JSONDecodeError as exc:
+        st.warning(f"{path.name} JSON 解析失败：{exc}。已使用默认值。")
+        return default
+    except OSError as exc:
+        st.warning(f"本地文件读取失败：{path.name}（{exc}）。已使用默认值。")
         return default
 
 
